@@ -1,129 +1,165 @@
-# Notwendige Bibliotheken importieren
-import pandas as pd               # Für die Arbeit mit Tabellen (DataFrames)
-import tensorflow as tf           # Wird hier zwar importiert, aber nicht verwendet (kann ignoriert werden)
-import seaborn as sns             # Für schöne Diagramme
-from sklearn.model_selection import train_test_split  # Wird hier nicht verwendet (kann ignoriert werden)
-import matplotlib.pyplot as plt   # Zum Erstellen von Diagrammen
-from sklearn.cluster import KMeans  # Für maschinelles Lernen (Clustering)
-from yellowbrick.cluster import KElbowVisualizer  # Zum Visualisieren der besten Clusteranzahl
+# ---------------------------------------------------------
+# Aufgabe: Daten einlesen
+# Laden der Datei mit korrektem Trennzeichen (;) und Dezimalzeichen (,)
+# ---------------------------------------------------------
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from yellowbrick.cluster import KElbowVisualizer
 
-# 1. CSV-Datei mit Weindaten einlesen
-file_path = "winequality-red.csv"
-df = pd.read_csv(file_path, delimiter=';')  # Daten mit Semikolon als Trennzeichen einlesen
+file_path = "AirQualityUCI.csv"
+df = pd.read_csv(file_path, delimiter=';', decimal=",", low_memory=False)
 
-# 2. Ein Blick in die Daten
+# ---------------------------------------------------------
+# Aufgabe: Leere Spalten entfernen (z. B. 'Unnamed: 15', 'Unnamed: 16')
+# ---------------------------------------------------------
+df = df.dropna(axis=1, how='all')
+
+# ---------------------------------------------------------
+# Aufgabe: Datensatz erkunden
+# Erste und letzte 5 Zeilen anzeigen
+# ---------------------------------------------------------
 print("\nErste 5 Zeilen des DataFrames:")
-print(df.head())  # Zeigt die ersten 5 Zeilen
-
-print("\nLetzte 5 Zeilen des DataFrames:")
-print(df.tail())  # Zeigt die letzten 5 Zeilen
-
-# 3. Informationen über den gesamten Datensatz
-print("\nAllgemeine Informationen zum DataFrame:")
-print(df.info())  # Zeigt Datentypen, Anzahl der Einträge usw.
-
-print("\nStatistische Übersicht des DataFrames:")
-print(df.describe())  # Zeigt z. B. Mittelwert, Min, Max für jede Spalte
-
-# 4. Nur bestimmte Spalten auswählen: Alkohol und pH-Wert
-selected_columns = df[['alcohol', 'pH']]
-print("\nErste 10 Zeilen der ausgewählten Spalten (Alkohol & pH):")
-print(selected_columns.head(10))
-
-# 5. Zeilen filtern: nur Weine mit Qualität = 8
-filtered_df_8 = df[df['quality'] == 8]
-print("\nZeilen mit Qualität genau 8:")
-print(filtered_df_8)
-
-# 6. Mehrere Bedingungen: Alkohol > 12.5 UND Qualität ≥ 7
-filtered_df = df[(df['alcohol'] > 12.5) & (df['quality'] >= 7)]
-print("\nZeilen mit Alkoholgehalt > 12.5 und Qualität >= 7:")
-print(filtered_df)
-
-# 7. Neue Spalte berechnen: Verhältnis Dichte zu Alkohol
-df['density_alcohol_ratio'] = df['density'] / df['alcohol']
-print("\nErste Zeilen mit neuer Spalte (Dichte/Alkoholgehalt):")
-print(df.head(8))
-
-# 8. Qualität als Text beschreiben statt nur als Zahl
-def quality_label(q):
-    if q == 3:
-        return "sehr schlecht"
-    elif q == 4:
-        return "schlecht"
-    elif q == 5:
-        return "okay"
-    elif q == 6:
-        return "gut"
-    else:
-        return "sehr gut"
-
-# Neue Spalte mit den Qualitäts-Beschreibungen hinzufügen
-df['quality_label'] = df['quality'].apply(quality_label)
-print("\nZuordnung der Qualitätswerte:")
-print(df[['quality', 'quality_label']].head())
-
-# 9. Zeilen entfernen, wenn pH-Wert kleiner als 3.0
-df = df[df['pH'] >= 3.0]
-print("\nErste Zeilen nach Entfernen von pH-Werten < 3.0:")
 print(df.head())
 
-# 10. Spaltennamen anzeigen
+print("\nLetzte 5 Zeilen des DataFrames:")
+print(df.tail())
+
+# ---------------------------------------------------------
+# Aufgabe: Zusammenfassung
+# Spaltennamen, Datentypen und Anzahl Nicht-Null-Werte anzeigen
+# ---------------------------------------------------------
+print("\nAllgemeine Informationen zum DataFrame:")
+print(df.info())
+
+# ---------------------------------------------------------
+# Aufgabe: Statistische Kennwerte anzeigen
+# ---------------------------------------------------------
+print("\nStatistische Übersicht des DataFrames:")
+print(df.describe())
+
+# ---------------------------------------------------------
+# Aufgabe: Spalten auswählen
+# Nur CO(GT) und NO2(GT) anzeigen, erste 10 Zeilen
+# ---------------------------------------------------------
+selected_columns = df[['CO(GT)', 'NO2(GT)']]
+print("\nAusgewählte Spalten (CO(GT) & NO2(GT)):")
+print(selected_columns.head(10))
+
+# ---------------------------------------------------------
+# Aufgabe: Bedingte Auswahl
+# Zeilen mit NO2(GT) > 200
+# ---------------------------------------------------------
+filtered_df_8 = df[df['NO2(GT)'] > 200]
+print("\nZeilen mit NO2(GT) > 200:")
+print(filtered_df_8)
+
+# ---------------------------------------------------------
+# Aufgabe: Mehrere Bedingungen
+# CO(GT) < 1.0 und T < 10°C
+# ---------------------------------------------------------
+filtered_df = df[(df['CO(GT)'] < 1.0) & (df['T'] < 10)]
+print("\nZeilen mit CO(GT) < 1.0 und T < 10:")
+print(filtered_df)
+
+# ---------------------------------------------------------
+# Aufgabe: Neue Spalte hinzufügen
+# CO_per_NO2 = CO(GT) / NO2(GT)
+# ---------------------------------------------------------
+df['CO_per_NO2'] = df['CO(GT)'] / df['NO2(GT)']
+print("\nNeue Spalte CO(GT) / NO2(GT):")
+print(df[['CO(GT)', 'NO2(GT)', 'CO_per_NO2']].head())
+
+# ---------------------------------------------------------
+# Aufgabe: Temperatur kategorisieren
+# Temp_Stufe: unter 5°C = kalt, 5–20°C = mäßig, über 20°C = warm
+# ---------------------------------------------------------
+def temperatur_label(t):
+    if t < 5:
+        return "kalt"
+    elif 5 <= t <= 20:
+        return "mäßig"
+    else:
+        return "warm"
+
+df['Temp_Stufe'] = df['T'].apply(temperatur_label)
+print("\nTemperaturstufen:")
+print(df[['T', 'Temp_Stufe']].head())
+
+# ---------------------------------------------------------
+# Aufgabe: Zeilen löschen bei fehlendem Benzolwert (C6H6(GT))
+# ---------------------------------------------------------
+df = df.dropna(subset=['C6H6(GT)'])
+print("\nDaten nach Entfernen von Zeilen mit fehlendem C6H6(GT):")
+print(df.head())
+
+# ---------------------------------------------------------
+# Aufgabe: Spaltenüberschriften anzeigen
+# ---------------------------------------------------------
 print("\nSpaltenüberschriften des DataFrames:")
 print(df.columns)
 
-# 11. Spaltennamen ins Deutsche übersetzen
+# ---------------------------------------------------------
+# Aufgabe: Spaltenüberschriften ersetzen durch deutsche Bezeichnungen
+# ---------------------------------------------------------
 deutsch_columns = {
-    'fixed acidity': 'fester Säuregehalt',
-    'volatile acidity': 'flüchtiger Säuregehalt',
-    'citric acid': 'Zitronensäure',
-    'residual sugar': 'Restzucker',
-    'chlorides': 'Chloride',
-    'free sulfur dioxide': 'freies Schwefeldioxid',
-    'total sulfur dioxide': 'Gesamtschwefeldioxid',
-    'density': 'Dichte',
-    'pH': 'pH-Wert',
-    'sulphates': 'Sulfate',
-    'alcohol': 'Alkohol',
-    'quality': 'Qualität'
+    'CO(GT)': 'fester Säuregehalt',
+    'PT08.S1(CO)': 'flüchtiger Säuregehalt',
+    'NMHC(GT)': 'Zitronensäure',
+    'C6H6(GT)': 'Restzucker',
+    'PT08.S2(NMHC)': 'Chloride',
+    'NO2(GT)': 'freies Schwefeldioxid',
+    'PT08.S4(NO2)': 'Gesamtschwefeldioxid',
+    'PT08.S5(O3)': 'Dichte',
+    'T': 'Temperatur',
+    'RH': 'Sulfate',
+    'AH': 'Alkohol',
 }
 
-df.rename(columns=deutsch_columns, inplace=True)  # Spaltennamen ändern
-print("\nErste Zeilen nach Umbenennung der Spalten:")
-print(df.head())
+df.rename(columns=deutsch_columns, inplace=True)
+print("\nSpaltennamen nach Umbenennung:")
+print(df.columns)
 
-# 12. Diagramm: Alkoholgehalt im Vergleich zur Qualität
-print("\nErstelle Scatterplot für Alkohol vs. Qualität...")
-sns.scatterplot(x=df['Alkohol'], y=df['Qualität'])
-plt.xlabel("Alkoholgehalt")
-plt.ylabel("Qualität")
-plt.title("Alkohol vs. Qualität")
-plt.show()  # Zeigt das Diagramm
+# ---------------------------------------------------------
+# Aufgabe: Scatterplot mit Seaborn
+# CO(GT) vs. NO2(GT) visualisieren
+# ---------------------------------------------------------
+print("\nErstelle Scatterplot zwischen CO und NO2:")
+sns.scatterplot(x=df['fester Säuregehalt'], y=df['freies Schwefeldioxid'])
+plt.xlabel("Fester Säuregehalt")
+plt.ylabel("Freies Schwefeldioxid")
+plt.title("CO vs. NO2")
+plt.show()
 
-# 13. KMeans Clustering: Weine automatisch in Gruppen einteilen
-print("\n#13 KMeans Qualität")
+# ---------------------------------------------------------
+# Aufgabe: KMeans-Clustering
+# - Nicht-numerische Spalten entfernen
+# - Clustering durchführen
+# - Ergebnis als neue Spalte 'cluster' hinzufügen
+# ---------------------------------------------------------
+print("\nStarte KMeans Clustering...")
 
-# Zielspalten entfernen, damit der Algorithmus unvoreingenommen ist
-data_unknown = df.drop(['Qualität', 'quality_label'], axis=1)
-print(data_unknown.dtypes)  # Zeigt Datentypen der verbleibenden Spalten
+# Nicht-numerische Spalten entfernen
+data_unknown = df.drop(['Date', 'Time'], axis=1, errors='ignore')
+data_unknown = data_unknown.select_dtypes(include='number').dropna()
 
-# Modell erstellen
+# KMeans-Modell erstellen
 model = KMeans()
 
-# Mit dem "Elbow"-Verfahren die beste Anzahl an Gruppen finden
+# Elbow-Methode zur Bestimmung optimaler Cluster-Anzahl
 visualizer = KElbowVisualizer(model, k=(2, 9))
 visualizer.fit(data_unknown)
 visualizer.show()
 
-# Danach Anzahl der Gruppen festlegen (z. B. 4)
-kmeans = KMeans(n_clusters=4)
-
-# Daten gruppieren (Clustern)
+# KMeans mit fester Clusteranzahl (z.B. 3)
+kmeans = KMeans(n_clusters=3)
 pred = kmeans.fit_predict(data_unknown)
 
-# Die erkannten Gruppen (Cluster) dem ursprünglichen DataFrame hinzufügen
-data_new = pd.concat([df, pd.DataFrame(pred, columns=['label'])], axis=1)
-print(data_new)
+# Cluster-Spalte hinzufügen
+df['cluster'] = pred
+print("\nDataFrame mit Cluster-Zugehörigkeit:")
+print(df[['fester Säuregehalt', 'freies Schwefeldioxid', 'Temperatur', 'cluster']].head())
 
-# Neue Datei mit den zusätzlichen Gruppierungen speichern
-data_new.to_csv("./data_new.csv")
+# Optional: Ergebnis als CSV speichern
+df.to_csv("data_mit_clustering.csv", index=False)
